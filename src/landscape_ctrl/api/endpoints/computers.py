@@ -219,8 +219,11 @@ async def get_computer_activities(
     offset: int = 0,
 ) -> list[ActivityResult]:
     """Get activities for specific computers."""
+    # GetActivities has no computer_id parameter; computers are selected through
+    # the query language ("The parameter computer_id is not recognized").
+    query = " OR ".join(f"computer:id:{i}" for i in computer_ids)
     params: dict = {
-        "computer_id": ",".join(str(i) for i in computer_ids),
+        "query": query,
         "limit": str(limit),
         "offset": str(offset),
     }

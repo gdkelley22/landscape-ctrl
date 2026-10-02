@@ -30,6 +30,7 @@ import httpx
 from landscape_ctrl.api.auth import (
     build_access_key_login_payload,
     get_secret_key,
+    percent_encode,
     sign_legacy_request,
 )
 from landscape_ctrl.config import LandscapeConfig, load_token, save_token
@@ -180,7 +181,21 @@ class LandscapeClient:
                     return {}
             return {}
         if resp.status_code in (401, 403):
-            raise AuthError(resp.status_code, "Authentication failed. Run: lsctl login")
+            # Surface the server's own explanation — a 403 from the legacy API is
+            # usually a signing problem, not an expired token, and telling the
+            # user to re-run `lsctl login` sends them down the wrong path.
+            try:
+                detail = resp.json()
+                detail = detail.get("message") or detail.get("error") or ""
+            except Exception:
+                detail = (resp.text or "").strip()
+            if resp.status_code == 401:
+                message = "Authentication failed. Run: lsctl login"
+            else:
+                message = "Access denied"
+            if detail:
+                message = f"{message}: {detail}"
+            raise AuthError(resp.status_code, message, body=resp.text)
         try:
             body = resp.json()
             message = body.get("message") or body.get("error") or str(body)
@@ -257,5 +272,14 @@ class LandscapeClient:
             secret_key=secret_key,
         )
 
-        resp = await self._http.get(self.cfg.legacy_url, params=signed_params)
+        # Landscape verifies the HMAC against a strict RFC 3986 canonicalization
+        # of the query string. httpx's default query encoding leaves characters
+        # like "+", "/" and "=" — all common in a Base64 signature — unescaped,
+        # so the server canonicalizes different bytes and rejects the request
+        # with SignatureDoesNotMatch. Build the query string ourselves instead.
+        query = "&".join(
+            f"{percent_encode(k)}={percent_encode(v)}"
+            for k, v in sorted(signed_params.items())
+        )
+        resp = await self._http.get(f"{self.cfg.legacy_url}?{query}")
         return self._handle_response(resp)

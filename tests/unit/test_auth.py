@@ -11,25 +11,25 @@ import urllib.parse
 
 import pytest
 
-from landscape_ctrl.api.auth import sign_legacy_request, _percent_encode
+from landscape_ctrl.api.auth import sign_legacy_request, percent_encode
 
 
 class TestPercentEncode:
     def test_encodes_spaces(self):
-        assert _percent_encode("hello world") == "hello%20world"
+        assert percent_encode("hello world") == "hello%20world"
 
     def test_encodes_plus(self):
-        assert _percent_encode("a+b") == "a%2Bb"
+        assert percent_encode("a+b") == "a%2Bb"
 
     def test_encodes_equals(self):
-        assert _percent_encode("a=b") == "a%3Db"
+        assert percent_encode("a=b") == "a%3Db"
 
     def test_leaves_unreserved(self):
         # RFC 3986 unreserved chars: ALPHA / DIGIT / "-" / "." / "_" / "~"
-        assert _percent_encode("abc123-._~") == "abc123-._~"
+        assert percent_encode("abc123-._~") == "abc123-._~"
 
     def test_encodes_slash(self):
-        assert _percent_encode("a/b") == "a%2Fb"
+        assert percent_encode("a/b") == "a%2Fb"
 
 
 class TestSignLegacyRequest:

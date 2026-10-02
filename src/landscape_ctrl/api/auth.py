@@ -100,7 +100,7 @@ def build_access_key_login_payload(
 # ---------------------------------------------------------------------------
 
 
-def _percent_encode(value: str) -> str:
+def percent_encode(value: str) -> str:
     """RFC 3986 percent-encoding (urllib.parse.quote with safe='')."""
     return urllib.parse.quote(str(value), safe="")
 
@@ -140,7 +140,7 @@ def sign_legacy_request(
     # Canonicalize: sort by key, percent-encode both key and value
     sorted_pairs = sorted(params.items(), key=lambda x: x[0])
     canonicalized = "&".join(
-        f"{_percent_encode(k)}={_percent_encode(v)}" for k, v in sorted_pairs
+        f"{percent_encode(k)}={percent_encode(v)}" for k, v in sorted_pairs
     )
 
     string_to_sign = "\n".join([method.upper(), hostname, path, canonicalized])
