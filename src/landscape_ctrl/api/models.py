@@ -13,7 +13,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Any
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 # ---------------------------------------------------------------------------
 # Shared / base
@@ -133,6 +133,19 @@ class ActivityResult(BaseModel):
     modification_time: datetime | None = None
 
     model_config = {"populate_by_name": True}
+
+    @field_validator("type", "status", "result_text", "summary", mode="before")
+    @classmethod
+    def _null_to_empty(cls, value: Any) -> Any:
+        """Landscape sends JSON null for these fields on pending activities."""
+        return "" if value is None else value
+
+    @model_validator(mode="after")
+    def _backfill_status(self) -> ActivityResult:
+        """The legacy API reports state as `activity_status`; v2 uses `status`."""
+        if not self.status and self.activity_status:
+            self.status = self.activity_status
+        return self
 
 
 # ---------------------------------------------------------------------------
